@@ -512,7 +512,7 @@ define([
             this.allSelected = false;
             for (var id in this.selection) {
                 if (exceptId !== id) {
-                    this.select(id, null, false);
+                    this._select(id, null, false);
                 }
             }
             if (!dontResetLastSelected) {
@@ -526,7 +526,7 @@ define([
             this.selection = {}; // we do this to clear out pages from previous sorts
             for (var i in this._rowIdToObject) {
                 var row = this.row(this._rowIdToObject[i]);
-                this.select(row.id, null, true);
+                this._select(row.id, null, true);
             }
             this._fireSelectionEvents();
         },

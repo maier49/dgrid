@@ -17,17 +17,7 @@ define([
 
 		_selectionTargetType: 'cells',
 
-		select: function (cell, toCell, value) {
-			// summary:
-			//		Selects or deselects the given row or range of rows.
-			// row: Mixed
-			//		Row object (or something that can resolve to one) to (de)select
-			// toRow: Mixed
-			//		If specified, the inclusive range between row and toRow will
-			//		be (de)selected
-			// value: Boolean|Null
-			//		Whether to select (true/default), deselect (false), or toggle
-			//		(null) the row
+		_select: function(cell, toCell, value) {
 			var i,
 				id;
 			if (typeof value === 'undefined') {
@@ -42,13 +32,13 @@ define([
 				if (value && typeof value === 'object') {
 					// value is a hash of true/false values
 					for (id in value) {
-						this.select(this.cell(cell.id, id), null, value[id]);
+						this._select(this.cell(cell.id, id), null, value[id]);
 					}
 				}
 				else {
 					// Select/deselect all columns in row
 					for (id in this.columns) {
-						this.select(this.cell(cell.id, id), null, value);
+						this._select(this.cell(cell.id, id), null, value);
 					}
 				}
 				return;
@@ -59,7 +49,7 @@ define([
 					previousRow = selection[rowId];
 				if (!cell.column) {
 					for (i in this.columns) {
-						this.select(this.cell(rowId, i), null, value);
+						this._select(this.cell(rowId, i), null, value);
 					}
 					return;
 				}
@@ -157,7 +147,7 @@ define([
 						// and now loop through each column to be selected
 						for (i = 0; i < columnIds.length; i++) {
 							cell = this.cell(nextNode, columnIds[i]);
-							this.select(cell, null, value);
+							this._select(cell, null, value);
 						}
 						if (nextNode == toElement) {
 							break;
@@ -165,6 +155,20 @@ define([
 					} while ((nextNode = cell.row.element[direction]));
 				}
 			}
+		},
+
+		select: function (cell, toCell, value) {
+			// summary:
+			//		Selects or deselects the given row or range of rows.
+			// row: Mixed
+			//		Row object (or something that can resolve to one) to (de)select
+			// toRow: Mixed
+			//		If specified, the inclusive range between row and toRow will
+			//		be (de)selected
+			// value: Boolean|Null
+			//		Whether to select (true/default), deselect (false), or toggle
+			//		(null) the row
+			this._select(cell, toCell, value);
 			this._fireSelectionEvents();
 		},
 		deselect: function (cell, toCell) {

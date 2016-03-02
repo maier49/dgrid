@@ -14,17 +14,7 @@ define([
 
 	return declare(SelectionBase, {
 
-		select: function (row, toRow, value) {
-			// summary:
-			//		Selects or deselects the given row or range of rows.
-			// row: Mixed
-			//		Row object (or something that can resolve to one) to (de)select
-			// toRow: Mixed
-			//		If specified, the inclusive range between row and toRow will
-			//		be (de)selected
-			// value: Boolean|Null
-			//		Whether to select (true/default), deselect (false), or toggle
-			//		(null) the row
+		_select: function (row, toRow, value) {
 			var selection,
 				previousValue,
 				element,
@@ -101,6 +91,20 @@ define([
 					}
 				}
 			}
+		},
+
+		select: function (row, toRow, value) {
+			// summary:
+			//		Selects or deselects the given row or range of rows.
+			// row: Mixed
+			//		Row object (or something that can resolve to one) to (de)select
+			// toRow: Mixed
+			//		If specified, the inclusive range between row and toRow will
+			//		be (de)selected
+			// value: Boolean|Null
+			//		Whether to select (true/default), deselect (false), or toggle
+			//		(null) the row
+			this._select(row, toRow, value);
 			this._fireSelectionEvents();
 		},
 		deselect: function (row, toRow) {
