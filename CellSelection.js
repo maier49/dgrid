@@ -4,10 +4,10 @@ define([
 	'dojo/dom-class',
 	'dojo/on',
 	'dojo/has',
-	'./Selection'
-], function (declare, aspect, domClass, listen, has, Selection) {
+	'./SelectionBase'
+], function (declare, aspect, domClass, listen, has, SelectionBase) {
 
-	return declare(Selection, {
+	return declare(SelectionBase, {
 		// summary:
 		//		Add cell level selection capabilities to a grid. The grid will have a selection property and
 		//		fire "dgrid-select" and "dgrid-deselect" events.
@@ -17,7 +17,17 @@ define([
 
 		_selectionTargetType: 'cells',
 
-		_select: function (cell, toCell, value) {
+		select: function (cell, toCell, value) {
+			// summary:
+			//		Selects or deselects the given row or range of rows.
+			// row: Mixed
+			//		Row object (or something that can resolve to one) to (de)select
+			// toRow: Mixed
+			//		If specified, the inclusive range between row and toRow will
+			//		be (de)selected
+			// value: Boolean|Null
+			//		Whether to select (true/default), deselect (false), or toggle
+			//		(null) the row
 			var i,
 				id;
 			if (typeof value === 'undefined') {
@@ -32,13 +42,13 @@ define([
 				if (value && typeof value === 'object') {
 					// value is a hash of true/false values
 					for (id in value) {
-						this._select(this.cell(cell.id, id), null, value[id]);
+						this.select(this.cell(cell.id, id), null, value[id]);
 					}
 				}
 				else {
 					// Select/deselect all columns in row
 					for (id in this.columns) {
-						this._select(this.cell(cell.id, id), null, value);
+						this.select(this.cell(cell.id, id), null, value);
 					}
 				}
 				return;
@@ -49,7 +59,7 @@ define([
 					previousRow = selection[rowId];
 				if (!cell.column) {
 					for (i in this.columns) {
-						this._select(this.cell(rowId, i), null, value);
+						this.select(this.cell(rowId, i), null, value);
 					}
 					return;
 				}
@@ -128,7 +138,7 @@ define([
 							columnIds.push(id);
 						}
 						if (id === idFrom && (idFrom = columnIds) ||
-								id === idTo && (idTo = columnIds)) {
+							id === idTo && (idTo = columnIds)) {
 							// Once found, mark it off so we don't hit it again
 							columnIds.push(id);
 							if (started || (idFrom == columnIds && id == idTo)) {
@@ -147,7 +157,7 @@ define([
 						// and now loop through each column to be selected
 						for (i = 0; i < columnIds.length; i++) {
 							cell = this.cell(nextNode, columnIds[i]);
-							this._select(cell, null, value);
+							this.select(cell, null, value);
 						}
 						if (nextNode == toElement) {
 							break;
@@ -155,6 +165,18 @@ define([
 					} while ((nextNode = cell.row.element[direction]));
 				}
 			}
+			this._fireSelectionEvents();
+		},
+		deselect: function (cell, toCell) {
+			// summary:
+			//		Deselects the given row or range of rows.
+			// row: Mixed
+			//		Row object (or something that can resolve to one) to deselect
+			// toRow: Mixed
+			//		If specified, the inclusive range between row and toRow will
+			//		be deselected
+
+			this.select(cell, toCell, false);
 		},
 
 		_determineSelectionDirection: function () {
