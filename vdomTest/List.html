@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Test dgrid vdom List</title>
+	<meta name="viewport" content="width=570">
+	<style>
+		@import "../../dojo/resources/dojo.css";
+		@import "../css/dgrid.css";
+		@import "../../dijit/themes/claro/claro.css";
+		@import "../css/skins/claro.css";
+
+		.dgrid {
+			width: 400px;
+			height: 200px;
+			margin: 20px 0 0 50px;
+		}
+
+		.heading {
+			margin-left: 20px;
+			margin-top: 20px;
+			font-weight: bold;
+		}
+	</style>
+</head>
+<body class="claro">
+<div class="heading">vdom list</div>
+<div id="vdomList"></div>
+<div class="heading">list</div>
+<div id="list"></div>
+<script src="../../dojo/dojo.js" data-dojo-config="async: true"></script>
+<script>
+	require({
+		packages: [
+			{name: 'maquette', location: '../dgrid/node_modules/maquette/dist', main: 'maquette'}
+		]
+	}, ['maquette'], function (maquette) {
+		define('hyperscript', function () {
+			return maquette.h;
+		});
+		require(['dgrid/List', 'dgrid/vdom/List'], function (List, VdomList) {
+			var projector = maquette.createProjector();
+			var vdomList = new VdomList({projector: projector});
+
+			var data1 = ['Red', 'Yellow', 'Blue', 'Green', 'Purple', 'Orange'];
+			var data2 = ['One', 'Two', 'Three', 'Four', 'Five'];
+			data1 = data1.concat(data2);
+			data1 = data1.concat(data1);
+
+			projector.append(document.getElementById('vdomList'), function () {
+				return vdomList.create();
+			});
+
+			vdomList.renderArray(data1);
+
+			var list = new List({}, 'list');
+			list.renderArray(data1);
+		});
+	});
+</script>
+</body>
+</html>
