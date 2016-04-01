@@ -34,28 +34,23 @@
 		packages: [
 			{name: 'maquette', location: '../dgrid/node_modules/maquette/dist', main: 'maquette'}
 		]
-	}, ['maquette'], function (maquette) {
-		define('hyperscript', function () {
-			return maquette.h;
+	}, ['maquette', 'dgrid/List', 'dgrid/vdom/List'], function (maquette, List, VdomList) {
+		var projector = maquette.createProjector();
+
+		var data1 = ['Red', 'Yellow', 'Blue', 'Green', 'Purple', 'Orange'];
+		var data2 = ['One', 'Two', 'Three', 'Four', 'Five'];
+		data1 = data1.concat(data2);
+		data1 = data1.concat(data1);
+
+		var vdomList = new VdomList({ projector: projector, id: 1});
+		projector.append(document.getElementById('vdomList'), function () {
+			return vdomList.create();
 		});
-		require(['dgrid/List', 'dgrid/vdom/List'], function (List, VdomList) {
-			var projector = maquette.createProjector();
-			var vdomList = new VdomList({projector: projector});
 
-			var data1 = ['Red', 'Yellow', 'Blue', 'Green', 'Purple', 'Orange'];
-			var data2 = ['One', 'Two', 'Three', 'Four', 'Five'];
-			data1 = data1.concat(data2);
-			data1 = data1.concat(data1);
+		vdomList.renderArray(data1);
 
-			projector.append(document.getElementById('vdomList'), function () {
-				return vdomList.create();
-			});
-
-			vdomList.renderArray(data1);
-
-			var list = new List({}, 'list');
-			list.renderArray(data1);
-		});
+		var list = new List({}, 'list');
+		list.renderArray(data1);
 	});
 </script>
 </body>
