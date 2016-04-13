@@ -273,9 +273,16 @@ define([
 			// re-fire, since browsers are not consistent about propagation here
 			event.stopPropagation();
 			listen.emit(grid.node.domNode, 'scroll', {scrollTarget: grid.bodyNode.domNode});
+
+			if (this._processScroll) {
+				this._processScroll();
+			}
 		},
 
 		postCreate: function () {
+			if (this._processScroll) {
+				this._processScroll = miscUtil[this.pagingMethod](this._processScroll, null, this.pagingDelay);
+			}
 		},
 
 		startup: function () {
@@ -395,32 +402,12 @@ define([
 			}, delay || this.highlightDuration);
 		},
 
-		adjustRowIndices: function (firstRow) {
-			// this traverses through rows to maintain odd/even classes on the rows when indexes shift;
-			var next = firstRow;
-			var rowIndex = next.rowIndex;
-			if (rowIndex > -1) { // make sure we have a real number in case this is called on a non-row
-				do {
-					// Skip non-numeric, non-rows
-					if (next.rowIndex > -1) {
-						if (this.maintainOddEven) {
-							if (domClass.contains(next, 'dgrid-row')) {
-								domClass.replace(next, (rowIndex % 2 === 1 ? oddClass : evenClass),
-									(rowIndex % 2 === 0 ? oddClass : evenClass));
-							}
-						}
-						next.rowIndex = rowIndex++;
-					}
-				} while ((next = next.nextSibling) && next.rowIndex !== rowIndex);
-			}
-		},
-
 		renderArray: function (results) {
 			this.rowData = results;
 			this.projector.scheduleRender();
 		},
 
-		renderData: function (options) {
+		renderData: function () {
 			// summary:
 			//		Renders an array of objects as rows, before the given node.
 

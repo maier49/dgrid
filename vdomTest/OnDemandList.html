@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title>Test dgrid vdom OnDemandList</title>
+	<meta name="viewport" content="width=570">
+	<style>
+		@import "../../dojo/resources/dojo.css";
+		@import "../css/dgrid.css";
+		@import "../../dijit/themes/claro/claro.css";
+		@import "../css/skins/claro.css";
+
+		.dgrid {
+			width: 2000px;
+			height: 200px;
+			margin: 20px 0 0 50px;
+		}
+
+		.heading {
+			margin-left: 20px;
+			margin-top: 20px;
+			font-weight: bold;
+		}
+	</style>
+</head>
+<body class="claro">
+<div class="heading">vdom grid</div>
+<div id="vdomGrid"></div>
+<div>
+	<button id="modifyButton1">Modify</button>
+</div>
+<div class="heading">grid</div>
+<div id="grid"></div>
+<div>
+	<button id="modifyButton2">Modify</button>
+</div>
+<script src="../../dojo/dojo.js" data-dojo-config="async: true"></script>
+<script>
+	var NUMBER_OF_DATA_COLUMNS = 12;
+	require({
+		packages: [
+			{name: 'maquette', location: '../dgrid/node_modules/maquette/dist', main: 'maquette'}
+		]
+	}, ['maquette', 'dgrid/OnDemandList', 'dgrid/vdom/OnDemandList', 'dgrid/_StoreMixin', 'dgrid/vdom/_StoreMixin', 'dstore/Memory',
+		'dstore/Trackable', 'dojo/on'], function (maquette, OnDemandList, VdomOnDemandList, StoreMixin, VdomStoreMixin, Memory, Trackable, on) {
+
+
+		var VdomOnDemandStoreMixin = VdomStoreMixin.createSubclass([], {
+			refresh: function () {
+				var self = this;
+
+				// First defer to List#refresh to clear the grid's
+				// previous content
+				this.inherited(arguments);
+
+				if (!this._renderedCollection) {
+					return;
+				}
+			},
+
+			renderArray: function () {
+				var rows = this.inherited(arguments);
+
+				// Clear _lastCollection which is ordinarily only used for
+				// store-less grids
+				this._lastCollection = null;
+
+				return rows;
+			}
+		});
+
+		var OnDemandStoreMixin = StoreMixin.createSubclass([], {
+			refresh: function () {
+				var self = this;
+
+				// First defer to List#refresh to clear the grid's
+				// previous content
+				this.inherited(arguments);
+
+				if (!this._renderedCollection) {
+					return;
+				}
+			},
+
+			renderArray: function () {
+				var rows = this.inherited(arguments);
+
+				// Clear _lastCollection which is ordinarily only used for
+				// store-less grids
+				this._lastCollection = null;
+
+				return rows;
+			}
+		});
+
+		var projector = maquette.createProjector();
+
+		var data = [];
+		var i = 0;
+		for (; i < 20000; i++) {
+			data[i] = makeDataItem(i, NUMBER_OF_DATA_COLUMNS);
+		}
+
+		var store = new (Memory.createSubclass([Trackable]))({data: data});
+
+		data = [];
+		i = 0;
+		for (; i < 20000; i++) {
+			data[i] = makeDataItem(i, NUMBER_OF_DATA_COLUMNS);
+		}
+
+		var vdomStore = new (Memory.createSubclass([Trackable]))({data: data});
+
+		// Pass the proj
+		var VdomStoreList = VdomOnDemandList.createSubclass([VdomOnDemandStoreMixin]);
+		var vdomGrid = new VdomStoreList({
+			id: 'vdomGrid',
+			projector: projector,
+			columns: makeColumnDef(NUMBER_OF_DATA_COLUMNS),
+			collection: vdomStore
+		});
+		projector.append(document.getElementById(vdomGrid.id), function () {
+			return vdomGrid.create();
+		});
+
+		var StoreGrid = OnDemandList.createSubclass([OnDemandStoreMixin]);
+		var grid = new StoreGrid({
+			columns: makeColumnDef(NUMBER_OF_DATA_COLUMNS),
+			collection: store
+		}, 'grid');
+
+		var toModify = 0;
+		on(document.getElementById('modifyButton1'), 'click', function () {
+			vdomStore.get(toModify).then(function (item) {
+				item.field0 = 'XXX ' + i;
+				vdomStore.put(item);
+				i++;
+				toModify = (toModify + 1) % 3;
+			});
+		});
+		on(document.getElementById('modifyButton2'), 'click', function () {
+			store.get(toModify).then(function (item) {
+				item.field0 = 'XXX ' + i;
+				store.put(item);
+				i++;
+				toModify = (toModify + 1) % 3;
+			});
+		});
+	});
+
+	function makeDataItem(i, fieldCount) {
+		var item = { id: i };
+		for (var n = 0; n < fieldCount; n++) {
+			item['field' + n] = 'Data ' + n + ' - ' + i;
+		}
+		return item;
+	}
+
+	function makeColumnDef(fieldCount) {
+		var columns = {
+			id: "ID"
+		};
+		for (var n = 0 ; n < fieldCount; n++) {
+			columns['field' + n] = "Field " + n;
+		}
+		return columns;
+	}
+</script>
+</body>
+</html>

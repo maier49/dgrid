@@ -280,7 +280,7 @@ define([
 			row = this.inherited(arguments);
 
 			if (options && options.rows) {
-				options.rows[i] = row;
+				options.rows[i] = object;
 			}
 
 			// Remove no data message when a new row appears.
@@ -454,11 +454,70 @@ define([
 		},
 
 		_observeCollection: function (collection, container, options) {
-			var self = this;
+			var self = this,
+				rows = options.rows,
+				row;
 
 			var handles = [
-				collection.on('delete, update, add', function () {
-					self.projector.scheduleRender();
+				collection.on('delete, update', function (event) {
+					var from = event.previousIndex;
+					var to = event.index;
+
+					if (from !== undefined && rows[from]) {
+						if ('max' in rows && (to === undefined || to < rows.min || to > rows.max)) {
+							rows.max--;
+						}
+
+						row = rows[from];
+						// remove the old slot
+						rows.splice(from, 1);
+
+						if (event.type === 'delete' ||
+								(event.type === 'update' && (from < to || to === undefined))) {
+							// adjust the rowIndex so adjustRowIndices has the right starting point
+							rows[from] && rows[from].rowIndex--;
+						}
+					}
+					if (event.type === 'delete') {
+						// Reset row in case this is later followed by an add;
+						// only update events should retain the row variable below
+						row = null;
+					}
+				}),
+
+				collection.on('add, update', function (event) {
+					var from = event.previousIndex;
+					var to = event.index;
+					var nextNode;
+
+					// When possible, restrict observations to the actually rendered range
+					if (to !== undefined && (!('max' in rows) || (to >= rows.min && to <= rows.max))) {
+						if ('max' in rows && (from === undefined || from < rows.min || from > rows.max)) {
+							rows.max++;
+						}
+						rows.splice(to, 0, event.target);
+					}
+					// Reset row so it doesn't get reused on the next event
+					row = null;
+				}),
+
+				collection.on('add, delete, update', function (event) {
+					var from = (typeof event.previousIndex !== 'undefined') ? event.previousIndex : Infinity;
+
+					// the removal of rows could cause us to need to page in more items
+					if (from !== Infinity && self._processScroll && (rows[from] || rows[from - 1])) {
+						self._processScroll();
+					}
+
+					// Fire _onNotification, even for out-of-viewport notifications,
+					// since some things may still need to update (e.g. Pagination's status/navigation)
+					self._onNotification(rows, event, collection);
+
+					// Update _total after _onNotification so that it can potentially
+					// decide whether to perform actions based on whether the total changed
+					if (collection === self._renderedCollection && 'totalLength' in event) {
+						self._total = event.totalLength;
+					}
 				})
 			];
 
