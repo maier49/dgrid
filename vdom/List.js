@@ -274,15 +274,12 @@ define([
 			event.stopPropagation();
 			listen.emit(grid.node.domNode, 'scroll', {scrollTarget: grid.bodyNode.domNode});
 
-			if (this._processScroll) {
-				this._processScroll();
+			if (grid._processScroll) {
+				grid._processScroll(event);
 			}
 		},
 
 		postCreate: function () {
-			if (this._processScroll) {
-				this._processScroll = miscUtil[this.pagingMethod](this._processScroll, null, this.pagingDelay);
-			}
 		},
 
 		startup: function () {
@@ -407,7 +404,7 @@ define([
 			this.projector.scheduleRender();
 		},
 
-		renderData: function () {
+		renderData: function (options) {
 			// summary:
 			//		Renders an array of objects as rows, before the given node.
 
@@ -620,8 +617,8 @@ define([
 
 		getScrollPosition: function () {
 			return {
-				x: this.bodyNode.scrollLeft,
-				y: this.bodyNode.scrollTop
+				x: this.bodyNode.domNode ? this.bodyNode.domNode.scrollLeft : 0,
+				y: this.bodyNode.domNode ? this.bodyNode.domNode.scrollTop : 0
 			};
 		},
 

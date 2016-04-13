@@ -2,7 +2,7 @@
 <html>
 <head>
 	<meta charset="utf-8">
-	<title>Test dgrid vdom OnDemandList</title>
+	<title>Test dgrid vdom OnDemandGrid</title>
 	<meta name="viewport" content="width=570">
 	<style>
 		@import "../../dojo/resources/dojo.css";
@@ -41,8 +41,8 @@
 		packages: [
 			{name: 'maquette', location: '../dgrid/node_modules/maquette/dist', main: 'maquette'}
 		]
-	}, ['maquette', 'dgrid/OnDemandList', 'dgrid/vdom/OnDemandList', 'dgrid/_StoreMixin', 'dgrid/vdom/_StoreMixin', 'dstore/Memory',
-		'dstore/Trackable', 'dojo/on'], function (maquette, OnDemandList, VdomOnDemandList, StoreMixin, VdomStoreMixin, Memory, Trackable, on) {
+	}, ['maquette', 'dgrid/OnDemandGrid', 'dgrid/vdom/OnDemandGrid', 'dgrid/_StoreMixin', 'dgrid/vdom/_StoreMixin', 'dstore/Memory',
+		'dstore/Trackable', 'dojo/on'], function (maquette, OnDemandGrid, VdomOnDemandGrid, StoreMixin, VdomStoreMixin, Memory, Trackable, on) {
 
 
 		var VdomOnDemandStoreMixin = VdomStoreMixin.createSubclass([], {
@@ -98,7 +98,7 @@
 		var data = [];
 		var i = 0;
 		for (; i < 20000; i++) {
-			data[i] = i;//makeDataItem(i, NUMBER_OF_DATA_COLUMNS);
+			data[i] = makeDataItem(i, NUMBER_OF_DATA_COLUMNS);
 		}
 
 		var store = new (Memory.createSubclass([Trackable]))({data: data});
@@ -106,14 +106,14 @@
 		data = [];
 		i = 0;
 		for (; i < 20000; i++) {
-			data[i] = i;//makeDataItem(i, NUMBER_OF_DATA_COLUMNS);
+			data[i] = makeDataItem(i, NUMBER_OF_DATA_COLUMNS);
 		}
 
 		var vdomStore = new (Memory.createSubclass([Trackable]))({data: data});
 
 		// Pass the proj
-		var VdomStoreList = VdomOnDemandList.createSubclass([VdomOnDemandStoreMixin]);
-		var vdomGrid = new VdomStoreList({
+		var VdomStoreGrid = VdomOnDemandGrid.createSubclass([VdomOnDemandStoreMixin]);
+		var vdomGrid = new VdomStoreGrid({
 			id: 'vdomGrid',
 			projector: projector,
 			columns: makeColumnDef(NUMBER_OF_DATA_COLUMNS),
@@ -123,7 +123,7 @@
 			return vdomGrid.create();
 		});
 
-		var StoreGrid = OnDemandList.createSubclass([OnDemandStoreMixin]);
+		var StoreGrid = OnDemandGrid.createSubclass([OnDemandStoreMixin]);
 		var grid = new StoreGrid({
 			columns: makeColumnDef(NUMBER_OF_DATA_COLUMNS),
 			collection: store

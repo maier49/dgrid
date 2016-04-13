@@ -74,6 +74,29 @@ define([
 		//		the first range of data.
 		rowHeight: 0,
 
+		postCreate: function() {
+			this._removeDistantRows = miscUtil.debounce(
+				function(start, end) {
+					var rowHeight = this.rowHeight || 20;
+					var rowCacheSize = Math.round(this.farOffRemoval / rowHeight);
+					var deleteTo = start - rowCacheSize;
+					var deleteFrom = end + rowCacheSize;
+					var i;
+
+					for (i = 0; i < deleteTo; i++) {
+						this._cached[i] = null;
+					}
+
+					for (i = deleteFrom; i < this._cached.length; i++) {
+						this._cached[i] = null;
+					}
+				},
+				this,
+				100
+			);
+			this.inherited(arguments);
+		},
+
 		destroy: function () {
 			this.inherited(arguments);
 			if (this._refreshTimeout) {
@@ -115,7 +138,9 @@ define([
 		resize: function () {
 			this.inherited(arguments);
 			if (!this.rowHeight) {
-				this._calcAverageRowHeight(this.contentNode.getElementsByClassName('dgrid-row'));
+				this._calcAverageRowHeight(
+					this.contentNode.domNode ? this.contentNode.domNode.getElementsByClassName('dgrid-row') : []
+				);
 			}
 			this._processScroll();
 		},
@@ -172,58 +197,81 @@ define([
 			//		Checks to make sure that everything in the viewable area has been
 			//		downloaded, and triggering a request for the necessary data when needed.
 
-			if (!this.rowHeight) {
-				return;
+			if (!this.bodyNode.domNode || !this.contentNode.domNode) {
+				return this.renderAndCache(0, this.minRowsPerPage, 0, this.minRowsPerPage);
+			} else if (!this.rowHeight) {
+				this._calcAverageRowHeight(
+					this.contentNode.domNode ? this.contentNode.domNode.getElementsByClassName('dgrid-row') : []
+				);
 			}
 
-			var self = this;
 			var visibleTop = this._visibleTop = (evt && evt.scrollTop) || this.getScrollPosition().y;
-			var startingIndex = visibleTop/this.rowHeight;
-			var count = (this.bodyNode.offsetHeight/this.rowHeight) + this.bufferRows;
+			var startingIndex = Math.floor(visibleTop/this.rowHeight);
+			var count = Math.ceil((this.bodyNode.domNode.offsetHeight/this.rowHeight)) + this.bufferRows;
 			var end = startingIndex + count;
 			var startQuery = startingIndex;
 			var endQuery = end;
 			if (this._cached) {
-				while(this._cached[startQuery] && startQuery < endQuery) {
+				while(this._cached[startQuery] != null && startQuery < endQuery) {
 					startQuery++;
 				}
 
-				while(this._cached[end] && startQuery > endQuery) {
+				while(this._cached[end] != null && startQuery > endQuery) {
 					endQuery--;
 				}
-			} else {
-				this._cached = [];
 			}
 
 			if (startQuery !== endQuery) {
-				var results = this._renderedCollection.fetchRange({
-					start: startQuery,
-					end: endQuery
-				});
-				return results.totalLength.then(function(length) {
-					self._totalRows = length;
-					return results.then(function(data) {
-						self._cached.splice.apply(self._cached, [ startQuery, 0].concat(data));
-						self.renderArray(self._cached.slice(startingIndex, end));
-					});
-				});
+				return this.renderAndCache(startingIndex, end, startQuery, endQuery)
 			} else {
-				self.renderArray(this._cached.slice(startingIndex, end));
+				this.renderArray(this._cached.slice(startingIndex, end));
 				return when();
 			}
 		},
 
+		renderAndCache: function(startingIndex, end, startQuery, endQuery) {
+			if (!this._renderedCollection) {
+				return;
+			}
+
+			if (!this._cached) {
+				this._cached = [];
+			} else {
+				this._removeDistantRows(startingIndex, end);
+			}
+			var results = this._renderedCollection.fetchRange({
+				start: startQuery,
+				end: endQuery
+			});
+			var self = this;
+			return results.totalLength.then(function (length) {
+				self._totalRows = length;
+				return results.then(function (data) {
+					// Make sure our array is long enough that the
+					// data is added at the right index
+					for (var i = 0; i < data.length; i++) {
+						self._cached[i + startQuery] = data[i];
+					}
+					self.renderArray(self._cached.slice(startingIndex, end));
+				});
+			});
+		},
+
+		_removeDistantRows: function(start, end) {
+		},
+
 		renderData: function() {
 			this.inherited(arguments);
-			if (this.rowHeight && this._totalRows) {
+			if (this._totalRows) {
+				var rowHeight = this.rowHeight || 20;
 				var results = this.rowData;
-				var totalLength = this.rowHeight * this._totalRows;
+				var totalLength = rowHeight * this._totalRows;
 				this.contentNode.children.unshift(
-					h('div', { style: 'height: ' + this._visibleTop + 'px;'})
+					h('div', { key: 'before-node', style: 'height: ' + this._visibleTop + 'px;'})
 				);
 
 				this.contentNode.children.push(
-					h('div', { style: 'height: ' + (totalLength - this._visibleTop - (this.rowHeight * results)) + 'px;'})
+					h('div', { key: 'after-node', style: 'height: ' + (totalLength - this._visibleTop - (rowHeight * results.length)) + 'px;'})
 				);
 			}
 		}
