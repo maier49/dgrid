@@ -75,12 +75,12 @@ define([
 		rowHeight: 0,
 
 		postCreate: function() {
-			this._removeDistantRows = miscUtil.debounce(
-				function(start, end) {
+			this._removeDistantRows = miscUtil.throttle(
+				function() {
 					var rowHeight = this.rowHeight || 20;
 					var rowCacheSize = Math.round(this.farOffRemoval / rowHeight);
-					var deleteTo = start - rowCacheSize;
-					var deleteFrom = end + rowCacheSize;
+					var deleteTo = this._startingIndex - rowCacheSize;
+					var deleteFrom = this._end + rowCacheSize;
 					var i;
 
 					for (i = 0; i < deleteTo; i++) {
@@ -208,12 +208,17 @@ define([
 			}
 
 			var visibleTop = (evt && evt.scrollTop) || this.getScrollPosition().y;
-			var startingIndex = this._startingIndex = Math.max(0, Math.floor(visibleTop/this.rowHeight) - this.bufferRows);
-			var count = Math.ceil((this.bodyNode.domNode.offsetHeight/this.rowHeight));
-			var end = this._end = startingIndex + count + this.bufferRows;
+			var count = Math.ceil((this.bodyNode.domNode.offsetHeight/this.rowHeight)) + 1;
+			var startingIndex = this._startingIndex = Math.floor(visibleTop/this.rowHeight);
+			if (this._totalRows) {
+				startingIndex = this._startingIndex = Math.min(startingIndex, this._totalRows - count);
+			}
+			var end = this._end = startingIndex + count;
 			var startQuery = startingIndex;
 			var endQuery = end;
+
 			if (this._cached) {
+				this._removeDistantRows();
 				while(this._cached[startQuery] != null && startQuery < endQuery) {
 					startQuery++;
 				}
@@ -226,8 +231,8 @@ define([
 			if (startQuery !== endQuery) {
 				return this.renderAndCache(startingIndex, end, startQuery, endQuery)
 			} else {
-				this.renderArray(this._cached.slice(startingIndex, end));
-				return when();
+                this.renderArray(this._cached.slice(startingIndex, end));
+                return when();
 			}
 		},
 
@@ -238,8 +243,6 @@ define([
 
 			if (!this._cached) {
 				this._cached = [];
-			} else {
-				this._removeDistantRows(startingIndex, end);
 			}
 			var results = this._renderedCollection.fetchRange({
 				start: startQuery,
@@ -254,19 +257,22 @@ define([
 					for (var i = 0; i < data.length; i++) {
 						self._cached[i + startQuery] = data[i];
 					}
-					self.renderArray(self._cached.slice(startingIndex, end));
+					
+					var toRender = self._cached.slice(startingIndex, end);
+					if (toRender.indexOf(null) < 0) {
+						self.renderArray(toRender);
+					}
 				});
 			});
 		},
 
-		_removeDistantRows: function(start, end) {
+		_removeDistantRows: function() {
 		},
 
 		renderData: function() {
 			this.inherited(arguments);
 			if (this._totalRows) {
 				var rowHeight = this.rowHeight || 20;
-				var results = this.rowData;
 				this.contentNode.children.unshift(
 					h('div', { key: 'before-node', style: 'height: ' + (this._startingIndex * rowHeight) + 'px;'})
 				);
@@ -274,6 +280,7 @@ define([
 				this.contentNode.children.push(
 					h('div', { key: 'after-node', style: 'height: ' + ((this._totalRows - this._end) * rowHeight) + 'px;'})
 				);
+
 			}
 		}
 	});

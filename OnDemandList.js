@@ -361,6 +361,9 @@ define([
 				return;
 			}
 
+			console.log("Total Height: " + Array.prototype.reduceRight.call(this.contentNode.children, function(sum, element) {
+					return sum + element.offsetHeight;
+				}, 0));
 			var grid = this,
 				scrollNode = grid.bodyNode,
 				// grab current visible top from event if provided, otherwise from node

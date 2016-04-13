@@ -275,9 +275,16 @@ define([
 			listen.emit(grid.node.domNode, 'scroll', {scrollTarget: grid.bodyNode.domNode});
 
 			if (grid._processScroll) {
-				grid._processScroll(event);
+				if (!grid._modifiedProcessScroll) {
+					grid._modifiedProcessScroll =
+						miscUtil[grid.pagingMethod](function (event) {
+							grid._processScroll(event);
+						}, grid, grid.pagingDelay)
+				}
+				grid._modifiedProcessScroll(event);
 			}
 		},
+
 
 		postCreate: function () {
 		},
