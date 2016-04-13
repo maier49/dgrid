@@ -198,6 +198,8 @@ define([
 			//		downloaded, and triggering a request for the necessary data when needed.
 
 			if (!this.bodyNode.domNode || !this.contentNode.domNode) {
+				this._startingIndex = 0;
+				this._end = this.minRowsPerPage;
 				return this.renderAndCache(0, this.minRowsPerPage, 0, this.minRowsPerPage);
 			} else if (!this.rowHeight) {
 				this._calcAverageRowHeight(
@@ -205,10 +207,10 @@ define([
 				);
 			}
 
-			var visibleTop = this._visibleTop = (evt && evt.scrollTop) || this.getScrollPosition().y;
-			var startingIndex = Math.floor(visibleTop/this.rowHeight);
-			var count = Math.ceil((this.bodyNode.domNode.offsetHeight/this.rowHeight)) + this.bufferRows;
-			var end = startingIndex + count;
+			var visibleTop = (evt && evt.scrollTop) || this.getScrollPosition().y;
+			var startingIndex = this._startingIndex = Math.max(0, Math.floor(visibleTop/this.rowHeight) - this.bufferRows);
+			var count = Math.ceil((this.bodyNode.domNode.offsetHeight/this.rowHeight));
+			var end = this._end = startingIndex + count + this.bufferRows;
 			var startQuery = startingIndex;
 			var endQuery = end;
 			if (this._cached) {
@@ -265,13 +267,12 @@ define([
 			if (this._totalRows) {
 				var rowHeight = this.rowHeight || 20;
 				var results = this.rowData;
-				var totalLength = rowHeight * this._totalRows;
 				this.contentNode.children.unshift(
-					h('div', { key: 'before-node', style: 'height: ' + this._visibleTop + 'px;'})
+					h('div', { key: 'before-node', style: 'height: ' + (this._startingIndex * rowHeight) + 'px;'})
 				);
 
 				this.contentNode.children.push(
-					h('div', { key: 'after-node', style: 'height: ' + (totalLength - this._visibleTop - (rowHeight * results.length)) + 'px;'})
+					h('div', { key: 'after-node', style: 'height: ' + ((this._totalRows - this._end) * rowHeight) + 'px;'})
 				);
 			}
 		}

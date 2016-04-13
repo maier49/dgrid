@@ -11,7 +11,7 @@
 		@import "../css/skins/claro.css";
 
 		.dgrid {
-			width: 2000px;
+			width: 1200px;
 			height: 200px;
 			margin: 20px 0 0 50px;
 		}
@@ -98,7 +98,7 @@
 		var data = [];
 		var i = 0;
 		for (; i < 20000; i++) {
-			data[i] = i;//makeDataItem(i, NUMBER_OF_DATA_COLUMNS);
+			data[i] = i;
 		}
 
 		var store = new (Memory.createSubclass([Trackable]))({data: data});
@@ -106,7 +106,7 @@
 		data = [];
 		i = 0;
 		for (; i < 20000; i++) {
-			data[i] = i;//makeDataItem(i, NUMBER_OF_DATA_COLUMNS);
+			data[i] = i;
 		}
 
 		var vdomStore = new (Memory.createSubclass([Trackable]))({data: data});
@@ -116,7 +116,6 @@
 		var vdomGrid = new VdomStoreList({
 			id: 'vdomGrid',
 			projector: projector,
-			columns: makeColumnDef(NUMBER_OF_DATA_COLUMNS),
 			collection: vdomStore
 		});
 		projector.append(document.getElementById(vdomGrid.id), function () {
@@ -125,7 +124,6 @@
 
 		var StoreGrid = OnDemandList.createSubclass([OnDemandStoreMixin]);
 		var grid = new StoreGrid({
-			columns: makeColumnDef(NUMBER_OF_DATA_COLUMNS),
 			collection: store
 		}, 'grid');
 
@@ -147,24 +145,6 @@
 			});
 		});
 	});
-
-	function makeDataItem(i, fieldCount) {
-		var item = { id: i };
-		for (var n = 0; n < fieldCount; n++) {
-			item['field' + n] = 'Data ' + n + ' - ' + i;
-		}
-		return item;
-	}
-
-	function makeColumnDef(fieldCount) {
-		var columns = {
-			id: "ID"
-		};
-		for (var n = 0 ; n < fieldCount; n++) {
-			columns['field' + n] = "Field " + n;
-		}
-		return columns;
-	}
 </script>
 </body>
 </html>
