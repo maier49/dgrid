@@ -15,13 +15,9 @@ define([
 		//		Extends List to include virtual scrolling functionality, querying a
 		//		dojo/store instance for the appropriate range when the user scrolls.
 
-		// minRowsPerPage: Integer
-		//		The minimum number of rows to request at one time.
-		minRowsPerPage: 25,
-
-		// maxRowsPerPage: Integer
-		//		The maximum number of rows to request at one time.
-		maxRowsPerPage: 250,
+		// rowsPerPage: Integer
+		//		The number of rows to request at one time.
+		rowsPerPage: 25,
 
 		// maxEmptySpace: Integer
 		//		Defines the maximum size (in pixels) of unrendered space below the
@@ -36,18 +32,6 @@ define([
 		//	  perform local scrolling without seeing the grid being built. Increasing this number can
 		//	  improve perceived performance when the data is being retrieved over a slow network.
 		bufferRows: 10,
-
-		// farOffRemoval: Integer
-		//		Defines the minimum distance (in pixels) from the visible viewport area
-		//		rows must be in order to be removed.  Setting to Infinity causes rows
-		//		to never be removed.
-		farOffRemoval: 2000,
-
-		// queryRowsOverlap: Integer
-		//		Indicates the number of rows to overlap queries. This helps keep
-		//		continuous data when underlying data changes (and thus pages don't
-		//		exactly align)
-		queryRowsOverlap: 0,
 
 		// pagingMethod: String
 		//		Method (from dgrid/util/misc) to use to either throttle or debounce
@@ -75,25 +59,6 @@ define([
 		rowHeight: 0,
 
 		postCreate: function() {
-			this._removeDistantRows = miscUtil.throttle(
-				function() {
-					var rowHeight = this.rowHeight || 20;
-					var rowCacheSize = Math.round(this.farOffRemoval / rowHeight);
-					var deleteTo = this._startingIndex - rowCacheSize;
-					var deleteFrom = this._end + rowCacheSize;
-					var i;
-
-					for (i = 0; i < deleteTo; i++) {
-						this._cached[i] = null;
-					}
-
-					for (i = deleteFrom; i < this._cached.length; i++) {
-						this._cached[i] = null;
-					}
-				},
-				this,
-				100
-			);
 			this.inherited(arguments);
 		},
 
@@ -199,8 +164,8 @@ define([
 
 			if (!this.bodyNode.domNode || !this.contentNode.domNode) {
 				this._startingIndex = 0;
-				this._end = this.minRowsPerPage;
-				return this.renderAndCache(0, this.minRowsPerPage, 0, this.minRowsPerPage);
+				this._end = this.rowsPerPage;
+				return this.render(0, this.rowsPerPage);
 			} else if (!this.rowHeight) {
 				this._calcAverageRowHeight(
 					this.contentNode.domNode ? this.contentNode.domNode.getElementsByClassName('dgrid-row') : []
@@ -209,64 +174,39 @@ define([
 
 			var visibleTop = (evt && evt.scrollTop) || this.getScrollPosition().y;
 			var count = Math.ceil((this.bodyNode.domNode.offsetHeight/this.rowHeight)) + 1;
-			var startingIndex = this._startingIndex = Math.floor(visibleTop/this.rowHeight);
+			var startingIndex = Math.floor(visibleTop/this.rowHeight);
+			var end = startingIndex + count;
+			if (this._startingIndex < startingIndex && this._end > end) {
+				return when();
+			}
+
+			count = Math.max(count, this.rowsPerPage);
+			end = this._end = startingIndex + count + this.bufferRows;
+			startingIndex = this._startingIndex = Math.max(0, startingIndex - this.bufferRows);
 			if (this._totalRows) {
 				startingIndex = this._startingIndex = Math.min(startingIndex, this._totalRows - count);
 			}
-			var end = this._end = startingIndex + count;
-			var startQuery = startingIndex;
-			var endQuery = end;
 
-			if (this._cached) {
-				this._removeDistantRows();
-				while(this._cached[startQuery] != null && startQuery < endQuery) {
-					startQuery++;
-				}
 
-				while(this._cached[end] != null && startQuery > endQuery) {
-					endQuery--;
-				}
-			}
-
-			if (startQuery !== endQuery) {
-				return this.renderAndCache(startingIndex, end, startQuery, endQuery)
-			} else {
-                this.renderArray(this._cached.slice(startingIndex, end));
-                return when();
-			}
+			return this.render(startingIndex, end)
 		},
 
-		renderAndCache: function(startingIndex, end, startQuery, endQuery) {
+		render: function(startingIndex, end) {
 			if (!this._renderedCollection) {
 				return;
 			}
 
-			if (!this._cached) {
-				this._cached = [];
-			}
 			var results = this._renderedCollection.fetchRange({
-				start: startQuery,
-				end: endQuery
+				start: startingIndex,
+				end: end
 			});
 			var self = this;
 			return results.totalLength.then(function (length) {
 				self._totalRows = length;
 				return results.then(function (data) {
-					// Make sure our array is long enough that the
-					// data is added at the right index
-					for (var i = 0; i < data.length; i++) {
-						self._cached[i + startQuery] = data[i];
-					}
-					
-					var toRender = self._cached.slice(startingIndex, end);
-					if (toRender.indexOf(null) < 0) {
-						self.renderArray(toRender);
-					}
+					self.renderArray(data);
 				});
 			});
-		},
-
-		_removeDistantRows: function() {
 		},
 
 		renderData: function() {
