@@ -45,7 +45,7 @@ define([
 		//		Indicates the delay (in milliseconds) imposed upon pagingMethod, to wait
 		//		before paging in more data on scroll events. This can be increased to
 		//		reduce client-side overhead or the number of requests sent to a server.
-		pagingDelay: miscUtil.defaultDelay,
+		pagingDelay: 15,
 
 		// keepScrollPosition: Boolean
 		//		When refreshing the list, controls whether the scroll position is
@@ -161,44 +161,73 @@ define([
 			// summary:
 			//		Checks to make sure that everything in the viewable area has been
 			//		downloaded, and triggering a request for the necessary data when needed.
-
 			if (!this.bodyNode.domNode || !this.contentNode.domNode) {
 				this._startingIndex = 0;
 				this._end = this.rowsPerPage;
-				return this.render(0, this.rowsPerPage);
+				this._visibleTop = 0;
+				return this.render();
 			} else if (!this.rowHeight) {
 				this._calcAverageRowHeight(
 					this.contentNode.domNode ? this.contentNode.domNode.getElementsByClassName('dgrid-row') : []
 				);
+			} else if (this._needsScrollRePosition) {
+				return when();
 			}
 
+			var oldTotalHeight = this._totalRows * this.rowHeight;
+			var oldRowHeight = this.rowHeight;
+			this._calcAverageRowHeight(
+				this.contentNode.domNode ? this.contentNode.domNode.getElementsByClassName('dgrid-row') : []
+			);
+			var newTotalHeight = this._totalRows * this.rowHeight;
+			if (oldTotalHeight !== newTotalHeight) {
+				this._needsScrollRePosition = true;
+			}
 			var visibleTop = (evt && evt.scrollTop) || this.getScrollPosition().y;
+			if (oldTotalHeight !== newTotalHeight) {
+				console.log("Height changed");
+				console.log("Old Height: ", oldTotalHeight);
+				console.log("new Height: ", newTotalHeight);
+				console.log("Old Visible Top: ", visibleTop);
+				console.log("Old calc starting index: ", Math.floor(visibleTop/oldRowHeight));
+			}
+
+			visibleTop = this._visibleTop = (visibleTop / oldTotalHeight) * newTotalHeight;
+
+			if (oldTotalHeight !== newTotalHeight) {
+				console.log("New Visible Top: ", visibleTop);
+				console.log("Old Starting Index: ", this._startingIndex);
+			}
+
 			var count = Math.ceil((this.bodyNode.domNode.offsetHeight/this.rowHeight)) + 1;
 			var startingIndex = Math.floor(visibleTop/this.rowHeight);
 			var end = startingIndex + count;
-			if (this._startingIndex < startingIndex && this._end > end) {
+			if (this._startingIndex < startingIndex && this._end > end && !this._needsScrollRePosition) {
 				return when();
 			}
 
 			count = Math.max(count, this.rowsPerPage);
-			end = this._end = startingIndex + count + this.bufferRows;
-			startingIndex = this._startingIndex = Math.max(0, startingIndex - this.bufferRows);
+			this._end = startingIndex + count + this.bufferRows;
+			this._startingIndex = Math.max(0, startingIndex - this.bufferRows);
+			if (oldTotalHeight !== newTotalHeight) {
+				console.log("New starting index: ", this._startingIndex);
+				console.log("\n\n\n\n\n");
+			}
 			if (this._totalRows) {
-				startingIndex = this._startingIndex = Math.min(startingIndex, this._totalRows - count);
+				this._startingIndex = Math.min(this._startingIndex, this._totalRows - count);
 			}
 
-
-			return this.render(startingIndex, end)
+			return this.render()
 		},
 
-		render: function(startingIndex, end) {
+		render: function() {
 			if (!this._renderedCollection) {
 				return;
 			}
 
 			var results = this._renderedCollection.fetchRange({
-				start: startingIndex,
-				end: end
+				start: this._startingIndex,
+				end: this._end
 			});
 			var self = this;
 			return results.totalLength.then(function (length) {
@@ -213,6 +242,10 @@ define([
 			this.inherited(arguments);
 			if (this._totalRows) {
 				var rowHeight = this.rowHeight || 20;
+				if (this._needsScrollRePosition) {
+					this.bodyNode.properties.scrollTop = this._visibleTop;
+					this._needsScrollRePosition = false;
+				}
 				this.contentNode.children.unshift(
 					h('div', { key: 'before-node', style: 'height: ' + (this._startingIndex * rowHeight) + 'px;'})
 				);
